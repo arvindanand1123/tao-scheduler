@@ -1,4 +1,4 @@
 # tao-scheduler
 
-![Tao-Scheduler Logo](logo.webpg)
+![Tao-Scheduler Logo](logo.png)
 
