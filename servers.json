@@ -2,7 +2,7 @@
   "servers": [
     {
       "bin": "",
-      "runCmd": ""
-    },
+      "runCmd": "chmod +x start.sh && ./start.sh"
+    }
   ]
 }
