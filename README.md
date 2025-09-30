@@ -1,7 +1,5 @@
 # tao-scheduler
 
-<img src="logo.png" alt="Tao-Scheduler Logo" width="200" height="100">
-
 ## Overview
 
 Tao Scheduler is a balanced and efficient server management tool designed for
