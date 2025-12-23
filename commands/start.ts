@@ -1,23 +1,13 @@
 import Logger from "../utils/logger.ts";
+import { getServerState, setServerRunning } from "../db/db.ts";
 import * as config from "../servers.json" with { type: "json" };
 
 const SERVER_DIR = "./server";
-const PID_FILE = `${SERVER_DIR}/server.pid`;
 
-async function isServerRunning(): Promise<boolean> {
+function isProcessRunning(pid: number): boolean {
   try {
-    const pidText = await Deno.readTextFile(PID_FILE);
-    const pid = parseInt(pidText.trim(), 10);
-
-    // Check if process exists
-    try {
-      Deno.kill(pid, "SIGCONT");
-      return true;
-    } catch {
-      // Process doesn't exist, clean up stale PID file
-      await Deno.remove(PID_FILE);
-      return false;
-    }
+    Deno.kill(pid, "SIGCONT");
+    return true;
   } catch {
     return false;
   }
@@ -34,9 +24,10 @@ export async function start(): Promise<void> {
     Deno.exit(1);
   }
 
-  // Check if already running
-  if (await isServerRunning()) {
-    Logger.error("Server is already running!");
+  // Check current state
+  const state = getServerState();
+  if (state.status === "running" && state.pid && isProcessRunning(state.pid)) {
+    Logger.error(`Server is already running (PID: ${state.pid})`);
     Deno.exit(1);
   }
 
@@ -54,44 +45,33 @@ export async function start(): Promise<void> {
     Deno.exit(1);
   }
 
-  Logger.info(`Starting server with ${memory} memory...`);
+  // Resolve absolute path for server directory
+  const absoluteServerDir = await Deno.realPath(SERVER_DIR);
+  const logFile = `${absoluteServerDir}/server.log`;
 
-  // Start the server process
-  const command = new Deno.Command("java", {
+  Logger.info(`Starting server with ${memory} memory in background...`);
+
+  // Start the server process in background using shell redirection
+  const command = new Deno.Command("sh", {
     args: [
-      `-Xmx${memory}`,
-      `-Xms${memory}`,
-      "-jar",
-      jarName,
-      "nogui",
+      "-c",
+      `java -Xmx${memory} -Xms${memory} -jar ${jarName} nogui > server.log 2>&1`,
     ],
-    cwd: SERVER_DIR,
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
+    cwd: absoluteServerDir,
+    stdin: "null",
+    stdout: "null",
+    stderr: "null",
   });
 
   const process = command.spawn();
 
-  // Save PID
-  await Deno.writeTextFile(PID_FILE, String(process.pid));
+  // Don't wait for the process - let it run in background
+  process.unref();
+
+  // Save state to database
+  setServerRunning(process.pid, version);
+
   Logger.info(`Server started with PID: ${process.pid}`);
-  Logger.info("Server is now running. Use 'tao stop' to stop it.");
-
-  // Wait for the process
-  const status = await process.status;
-
-  // Clean up PID file when server stops
-  try {
-    await Deno.remove(PID_FILE);
-  } catch {
-    // Ignore if already removed
-  }
-
-  if (!status.success) {
-    Logger.error(`Server exited with code: ${status.code}`);
-    Deno.exit(status.code);
-  }
-
-  Logger.info("Server stopped.");
+  Logger.info(`Logs: ${logFile}`);
+  Logger.info("Use 'tao stop' to stop the server.");
 }

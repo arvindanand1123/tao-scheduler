@@ -1,18 +1,7 @@
 import Logger from "../utils/logger.ts";
+import { getServerState, setServerStopped } from "../db/db.ts";
 
-const SERVER_DIR = "./server";
-const PID_FILE = `${SERVER_DIR}/server.pid`;
-
-async function getServerPid(): Promise<number | null> {
-  try {
-    const pidText = await Deno.readTextFile(PID_FILE);
-    return parseInt(pidText.trim(), 10);
-  } catch {
-    return null;
-  }
-}
-
-async function isProcessRunning(pid: number): Promise<boolean> {
+function isProcessRunning(pid: number): boolean {
   try {
     Deno.kill(pid, "SIGCONT");
     return true;
@@ -24,7 +13,7 @@ async function isProcessRunning(pid: number): Promise<boolean> {
 async function waitForProcess(pid: number, timeoutMs: number): Promise<boolean> {
   const startTime = Date.now();
   while (Date.now() - startTime < timeoutMs) {
-    if (!(await isProcessRunning(pid))) {
+    if (!isProcessRunning(pid)) {
       return true;
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -35,27 +24,24 @@ async function waitForProcess(pid: number, timeoutMs: number): Promise<boolean> 
 export async function stop(): Promise<void> {
   Logger.info("Stopping Minecraft server...");
 
-  const pid = await getServerPid();
+  const state = getServerState();
 
-  if (pid === null) {
-    Logger.error("No server PID file found. Is the server running?");
+  if (state.status !== "running" || !state.pid) {
+    Logger.error("No server is currently running.");
     Deno.exit(1);
   }
 
-  if (!(await isProcessRunning(pid))) {
-    Logger.warn("Server process is not running. Cleaning up PID file.");
-    try {
-      await Deno.remove(PID_FILE);
-    } catch {
-      // Ignore
-    }
+  const pid = state.pid;
+
+  if (!isProcessRunning(pid)) {
+    Logger.warn("Server process is not running. Cleaning up state.");
+    setServerStopped();
     return;
   }
 
   Logger.info(`Sending SIGTERM to process ${pid}...`);
 
   try {
-    // Send SIGTERM for graceful shutdown
     Deno.kill(pid, "SIGTERM");
   } catch (error) {
     Logger.error(`Failed to send signal: ${error}`);
@@ -64,7 +50,6 @@ export async function stop(): Promise<void> {
 
   Logger.info("Waiting for server to shut down gracefully (30s timeout)...");
 
-  // Wait for graceful shutdown
   const stopped = await waitForProcess(pid, 30000);
 
   if (!stopped) {
@@ -77,12 +62,8 @@ export async function stop(): Promise<void> {
     await waitForProcess(pid, 5000);
   }
 
-  // Clean up PID file
-  try {
-    await Deno.remove(PID_FILE);
-  } catch {
-    // Ignore if already removed
-  }
+  // Update state in database
+  setServerStopped();
 
   Logger.info("Server stopped successfully.");
 }

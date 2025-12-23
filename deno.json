@@ -1,10 +1,11 @@
 {
   "tasks": {
-    "dev": "deno run --allow-net --allow-read --allow-write --allow-run --watch main.ts",
-    "start": "deno run --allow-net --allow-read --allow-write --allow-run main.ts",
-    "install": "deno install --global --allow-net --allow-read --allow-write --allow-run -n tao main.ts"
+    "dev": "deno run --allow-all --watch main.ts",
+    "start": "deno run --allow-all main.ts",
+    "install": "deno install --global --force --allow-all -n tao main.ts"
   },
   "imports": {
-    "@std/assert": "jsr:@std/assert@latest"
+    "@std/assert": "jsr:@std/assert@^1.0.0",
+    "@db/sqlite": "jsr:@db/sqlite@^0.13.0"
   }
 }

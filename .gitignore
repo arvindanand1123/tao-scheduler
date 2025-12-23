@@ -130,3 +130,7 @@ dist
 .pnp.*
 
 .DS_Store
+
+# tao
+tao.db
+server/
