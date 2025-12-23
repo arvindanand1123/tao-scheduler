@@ -1,8 +1,13 @@
 {
-  "servers": [
-    {
-      "bin": "",
-      "runCmd": "chmod +x start.sh && ./start.sh"
-    }
-  ]
+  "server": {
+    "version": "1.21.4",
+    "memory": "2G",
+    "port": 25565,
+    "gamemode": "survival",
+    "difficulty": "normal",
+    "maxPlayers": 20,
+    "motd": "A Minecraft Server managed by tao",
+    "onlineMode": true,
+    "whitelist": false
+  }
 }
