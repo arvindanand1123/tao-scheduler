@@ -2,6 +2,34 @@ import Logger from "../utils/logger.ts";
 
 const SERVER_DIR = "./server";
 const OPS_FILE = `${SERVER_DIR}/ops.json`;
+const CONFIG_FILE = "./servers.json";
+
+interface ServerConfig {
+  server: {
+    version?: string;
+    memory?: string;
+    port?: number;
+    gamemode?: string;
+    difficulty?: string;
+    maxPlayers?: number;
+    motd?: string;
+    onlineMode?: boolean;
+    whitelist?: boolean;
+  };
+}
+
+async function readConfig(): Promise<ServerConfig> {
+  try {
+    const content = await Deno.readTextFile(CONFIG_FILE);
+    return JSON.parse(content);
+  } catch {
+    return { server: {} };
+  }
+}
+
+async function writeConfig(config: ServerConfig): Promise<void> {
+  await Deno.writeTextFile(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
 
 interface Op {
   uuid: string;
@@ -127,6 +155,26 @@ async function removeOp(ops: Op[]): Promise<Op[]> {
   return ops;
 }
 
+async function setMemory(config: ServerConfig): Promise<ServerConfig> {
+  const currentMemory = config.server.memory || "2G";
+  const newMemory = await prompt(`Memory allocation (current: ${currentMemory}): `);
+
+  if (!newMemory) {
+    Logger.info("Keeping current memory setting.");
+    return config;
+  }
+
+  // Validate memory format (e.g., 1G, 2G, 512M, 4096M)
+  if (!/^\d+[MG]$/i.test(newMemory)) {
+    Logger.error("Invalid format. Use format like '2G' or '1024M'.");
+    return config;
+  }
+
+  config.server.memory = newMemory.toUpperCase();
+  Logger.info(`Memory set to ${config.server.memory}.`);
+  return config;
+}
+
 export async function config(): Promise<void> {
   // Check if server directory exists
   try {
@@ -137,20 +185,23 @@ export async function config(): Promise<void> {
   }
 
   let ops = await readOps();
+  let serverConfig = await readConfig();
 
   console.log("\n┌─────────────────────────────────┐");
   console.log("│     tao - Server Configuration  │");
   console.log("└─────────────────────────────────┘\n");
 
   while (true) {
+    const currentMemory = serverConfig.server.memory || "2G";
     console.log("What would you like to do?");
     console.log("  1. List ops");
     console.log("  2. Add op");
     console.log("  3. Remove op");
-    console.log("  4. Save and exit");
-    console.log("  5. Exit without saving\n");
+    console.log(`  4. Set memory (current: ${currentMemory})`);
+    console.log("  5. Save and exit");
+    console.log("  6. Exit without saving\n");
 
-    const choice = await prompt("Select option (1-5): ");
+    const choice = await prompt("Select option (1-6): ");
 
     switch (choice) {
       case "1":
@@ -163,14 +214,18 @@ export async function config(): Promise<void> {
         ops = await removeOp(ops);
         break;
       case "4":
+        serverConfig = await setMemory(serverConfig);
+        break;
+      case "5":
         await writeOps(ops);
+        await writeConfig(serverConfig);
         Logger.info("Configuration saved.");
         return;
-      case "5":
+      case "6":
         Logger.info("Exiting without saving.");
         return;
       default:
-        Logger.warn("Invalid option. Please select 1-5.");
+        Logger.warn("Invalid option. Please select 1-6.");
     }
   }
 }
