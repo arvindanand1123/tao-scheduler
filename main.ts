@@ -1,6 +1,7 @@
 import { setup } from "./commands/setup.ts";
 import { start } from "./commands/start.ts";
 import { stop } from "./commands/stop.ts";
+import { config } from "./commands/config.ts";
 import Logger from "./utils/logger.ts";
 
 function printUsage(): void {
@@ -14,11 +15,13 @@ Commands:
   setup    Create all necessary artifacts for running the server
   start    Start the Minecraft server
   stop     Stop the Minecraft server
+  config   Configure server settings (ops, etc.)
 
 Examples:
   tao setup
   tao start
   tao stop
+  tao config
 `);
 }
 
@@ -41,6 +44,9 @@ async function main() {
       break;
     case "stop":
       await stop();
+      break;
+    case "config":
+      await config();
       break;
     case "help":
     case "--help":
