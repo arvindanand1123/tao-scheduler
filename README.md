@@ -18,9 +18,10 @@ deno task start <command>
 
 ```bash
 tao setup    # Download server jar and create necessary files
-tao start    # Start the Minecraft server
+tao start    # Start the Minecraft server (background)
 tao stop     # Stop the Minecraft server
-tao config   # Configure server settings (ops, etc.)
+tao tail     # Tail the server logs
+tao config   # Configure server settings
 ```
 
 ## Configuration
@@ -55,16 +56,21 @@ Creates all necessary artifacts for running the server:
 
 ### `tao start`
 
-Starts the Minecraft server with the configured memory allocation. The server runs in the foreground with full console access.
+Starts the Minecraft server in the background with the configured memory allocation. Server state is tracked in SQLite.
 
 ### `tao stop`
 
 Gracefully stops the running server by sending SIGTERM. Waits 30 seconds for graceful shutdown before force-killing.
 
+### `tao tail`
+
+Tails the server log file in real-time. Press Ctrl+C to exit.
+
 ### `tao config`
 
 Interactive CLI for server configuration:
 - List, add, and remove server operators (ops)
+- Set memory allocation
 - Automatically fetches player UUIDs from Mojang API
 
 ## Server Files
@@ -72,6 +78,9 @@ Interactive CLI for server configuration:
 All server files are stored in the `./server` directory:
 - `server-<version>.jar` - Minecraft server JAR
 - `server.properties` - Server configuration
+- `server.log` - Server output log
 - `ops.json` - Server operators
 - `eula.txt` - EULA acceptance
 - `world/` - World data (created on first run)
+
+State is persisted in `tao.db` (SQLite).
