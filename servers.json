@@ -1,6 +1,6 @@
 {
   "server": {
-    "version": "1.21.4",
+    "version": "1.21.11",
     "memory": "2G",
     "port": 25565,
     "gamemode": "survival",
