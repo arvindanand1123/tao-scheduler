@@ -51,27 +51,30 @@ export async function start(): Promise<void> {
 
   Logger.info(`Starting server with ${memory} memory in background...`);
 
-  // Start the server process in background using shell redirection
+  // Start the server process in background using nohup
   const command = new Deno.Command("sh", {
     args: [
       "-c",
-      `java -Xmx${memory} -Xms${memory} -jar ${jarName} nogui > server.log 2>&1`,
+      `nohup java -Xmx${memory} -Xms${memory} -jar ${jarName} nogui > server.log 2>&1 & echo $!`,
     ],
     cwd: absoluteServerDir,
     stdin: "null",
-    stdout: "null",
+    stdout: "piped",
     stderr: "null",
   });
 
-  const process = command.spawn();
+  const output = await command.output();
+  const pid = parseInt(new TextDecoder().decode(output.stdout).trim(), 10);
 
-  // Don't wait for the process - let it run in background
-  process.unref();
+  if (isNaN(pid)) {
+    Logger.error("Failed to start server - could not get PID");
+    Deno.exit(1);
+  }
 
   // Save state to database
-  setServerRunning(process.pid, version);
+  setServerRunning(pid, version);
 
-  Logger.info(`Server started with PID: ${process.pid}`);
+  Logger.info(`Server started with PID: ${pid}`);
   Logger.info(`Logs: ${logFile}`);
   Logger.info("Use 'tao stop' to stop the server.");
 }
