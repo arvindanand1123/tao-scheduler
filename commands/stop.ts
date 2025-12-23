@@ -1,6 +1,34 @@
 import Logger from "../utils/logger.ts";
 import { getServerState, setServerStopped } from "../db/db.ts";
 
+const SERVER_DIR = "./server";
+
+async function findServerPid(): Promise<number | null> {
+  try {
+    const absoluteServerDir = await Deno.realPath(SERVER_DIR);
+    // Find java process running the minecraft server jar in our server directory
+    const command = new Deno.Command("pgrep", {
+      args: ["-f", `java.*-jar.*server-.*\\.jar`],
+      stdout: "piped",
+      stderr: "null",
+    });
+    const output = await command.output();
+    const pids = new TextDecoder()
+      .decode(output.stdout)
+      .trim()
+      .split("\n")
+      .filter((p) => p)
+      .map((p) => parseInt(p, 10));
+
+    if (pids.length > 0) {
+      return pids[0];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function isProcessRunning(pid: number): boolean {
   try {
     Deno.kill(pid, "SIGCONT");
@@ -26,19 +54,21 @@ export async function stop(): Promise<void> {
 
   const state = getServerState();
 
-  if (state.status !== "running" || !state.pid) {
+  if (state.status !== "running") {
     Logger.error("No server is currently running.");
     Deno.exit(1);
   }
 
-  const pid = state.pid;
+  // Find the actual Java process
+  const pid = await findServerPid();
 
-  if (!isProcessRunning(pid)) {
-    Logger.warn("Server process is not running. Cleaning up state.");
+  if (!pid) {
+    Logger.warn("Server process not found. Cleaning up state.");
     setServerStopped();
     return;
   }
 
+  Logger.info(`Found server process with PID: ${pid}`);
   Logger.info(`Sending SIGTERM to process ${pid}...`);
 
   try {

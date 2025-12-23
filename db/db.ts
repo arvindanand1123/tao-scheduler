@@ -31,21 +31,28 @@ export interface ServerState {
   version: string | null;
 }
 
+interface DbRow {
+  pid: number | null;
+  status: string;
+  started_at: string | null;
+  version: string | null;
+}
+
 export function getServerState(): ServerState {
   const db = getDb();
   const row = db.prepare(
     "SELECT pid, status, started_at, version FROM server_state WHERE id = 1"
-  ).get<[number | null, string, string | null, string | null]>();
+  ).get() as DbRow | undefined;
 
   if (!row) {
     return { pid: null, status: "stopped", startedAt: null, version: null };
   }
 
   return {
-    pid: row[0],
-    status: row[1] as "running" | "stopped",
-    startedAt: row[2],
-    version: row[3],
+    pid: row.pid,
+    status: row.status as "running" | "stopped",
+    startedAt: row.started_at,
+    version: row.version,
   };
 }
 

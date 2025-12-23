@@ -55,19 +55,30 @@ export async function start(): Promise<void> {
   const command = new Deno.Command("sh", {
     args: [
       "-c",
-      `nohup java -Xmx${memory} -Xms${memory} -jar ${jarName} nogui > server.log 2>&1 & echo $!`,
+      `nohup java -Xmx${memory} -Xms${memory} -jar ${jarName} nogui > server.log 2>&1 &`,
     ],
     cwd: absoluteServerDir,
     stdin: "null",
-    stdout: "piped",
+    stdout: "null",
     stderr: "null",
   });
 
-  const output = await command.output();
-  const pid = parseInt(new TextDecoder().decode(output.stdout).trim(), 10);
+  await command.output();
+
+  // Wait a moment for the process to start
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  // Find the actual Java PID using pgrep
+  const pgrepCmd = new Deno.Command("pgrep", {
+    args: ["-f", `java.*-jar.*${jarName}`],
+    stdout: "piped",
+    stderr: "null",
+  });
+  const pgrepOutput = await pgrepCmd.output();
+  const pid = parseInt(new TextDecoder().decode(pgrepOutput.stdout).trim().split("\n")[0], 10);
 
   if (isNaN(pid)) {
-    Logger.error("Failed to start server - could not get PID");
+    Logger.error("Failed to start server - could not find Java process");
     Deno.exit(1);
   }
 
