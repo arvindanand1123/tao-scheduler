@@ -56,7 +56,7 @@ Creates all necessary artifacts for running the server:
 
 ### `tao start`
 
-Starts the Minecraft server in the background with the configured memory allocation. Server state is tracked in SQLite.
+Starts the Minecraft server in the background with the configured memory allocation. Server state is tracked.
 
 ### `tao stop`
 
@@ -68,10 +68,7 @@ Tails the server log file in real-time. Press Ctrl+C to exit.
 
 ### `tao config`
 
-Interactive CLI for server configuration:
-- List, add, and remove server operators (ops)
-- Set memory allocation
-- Automatically fetches player UUIDs from Mojang API
+Interactive CLI for server configuration. Run `tao help` for usage details.
 
 ## Server Files
 
