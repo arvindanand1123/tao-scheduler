@@ -3,6 +3,7 @@ import Logger from "../utils/logger.ts";
 const SERVER_DIR = "./server";
 const OPS_FILE = `${SERVER_DIR}/ops.json`;
 const WHITELIST_FILE = `${SERVER_DIR}/whitelist.json`;
+const SERVER_PROPERTIES_FILE = `${SERVER_DIR}/server.properties`;
 const CONFIG_FILE = "./servers.json";
 
 interface ServerConfig {
@@ -68,6 +69,19 @@ async function readWhitelist(): Promise<WhitelistPlayer[]> {
 
 async function writeWhitelist(whitelist: WhitelistPlayer[]): Promise<void> {
   await Deno.writeTextFile(WHITELIST_FILE, JSON.stringify(whitelist, null, 2));
+}
+
+async function enableWhitelistInProperties(): Promise<void> {
+  try {
+    let content = await Deno.readTextFile(SERVER_PROPERTIES_FILE);
+    if (content.includes("white-list=false")) {
+      content = content.replace("white-list=false", "white-list=true");
+      await Deno.writeTextFile(SERVER_PROPERTIES_FILE, content);
+      Logger.info("Enabled whitelist in server.properties");
+    }
+  } catch {
+    Logger.warn("server.properties not found. Run 'tao setup' to create it.");
+  }
 }
 
 async function prompt(message: string): Promise<string> {
@@ -234,6 +248,7 @@ async function addToWhitelist(whitelist: WhitelistPlayer[]): Promise<WhitelistPl
   };
 
   whitelist.push(newPlayer);
+  await enableWhitelistInProperties();
   Logger.info(`Added ${username} to whitelist.`);
   return whitelist;
 }
