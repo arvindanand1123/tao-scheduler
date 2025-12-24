@@ -2,6 +2,7 @@ import Logger from "../utils/logger.ts";
 
 const SERVER_DIR = "./server";
 const OPS_FILE = `${SERVER_DIR}/ops.json`;
+const WHITELIST_FILE = `${SERVER_DIR}/whitelist.json`;
 const CONFIG_FILE = "./servers.json";
 
 interface ServerConfig {
@@ -38,6 +39,11 @@ interface Op {
   bypassesPlayerLimit: boolean;
 }
 
+interface WhitelistPlayer {
+  uuid: string;
+  name: string;
+}
+
 async function readOps(): Promise<Op[]> {
   try {
     const content = await Deno.readTextFile(OPS_FILE);
@@ -49,6 +55,19 @@ async function readOps(): Promise<Op[]> {
 
 async function writeOps(ops: Op[]): Promise<void> {
   await Deno.writeTextFile(OPS_FILE, JSON.stringify(ops, null, 2));
+}
+
+async function readWhitelist(): Promise<WhitelistPlayer[]> {
+  try {
+    const content = await Deno.readTextFile(WHITELIST_FILE);
+    return JSON.parse(content);
+  } catch {
+    return [];
+  }
+}
+
+async function writeWhitelist(whitelist: WhitelistPlayer[]): Promise<void> {
+  await Deno.writeTextFile(WHITELIST_FILE, JSON.stringify(whitelist, null, 2));
 }
 
 async function prompt(message: string): Promise<string> {
@@ -175,33 +194,86 @@ async function setMemory(config: ServerConfig): Promise<ServerConfig> {
   return config;
 }
 
-export async function config(): Promise<void> {
-  // Check if server directory exists
-  try {
-    await Deno.stat(SERVER_DIR);
-  } catch {
-    Logger.error("Server directory not found. Run 'tao setup' first.");
-    Deno.exit(1);
+async function listWhitelist(whitelist: WhitelistPlayer[]): Promise<void> {
+  if (whitelist.length === 0) {
+    console.log("\nNo players whitelisted.\n");
+    return;
+  }
+  console.log("\nWhitelisted players:");
+  console.log("─".repeat(50));
+  for (const player of whitelist) {
+    console.log(`  ${player.name}`);
+  }
+  console.log("─".repeat(50) + "\n");
+}
+
+async function addToWhitelist(whitelist: WhitelistPlayer[]): Promise<WhitelistPlayer[]> {
+  const username = await prompt("Enter player username: ");
+  if (!username) {
+    Logger.warn("No username provided.");
+    return whitelist;
   }
 
-  let ops = await readOps();
-  let serverConfig = await readConfig();
+  // Check if already whitelisted
+  if (whitelist.some((p) => p.name.toLowerCase() === username.toLowerCase())) {
+    Logger.warn(`${username} is already whitelisted.`);
+    return whitelist;
+  }
 
-  console.log("\n┌─────────────────────────────────┐");
-  console.log("│     tao - Server Configuration  │");
-  console.log("└─────────────────────────────────┘\n");
+  console.log(`Looking up UUID for ${username}...`);
+  const uuid = await fetchUUID(username);
 
+  if (!uuid) {
+    Logger.error(`Could not find player: ${username}`);
+    return whitelist;
+  }
+
+  const newPlayer: WhitelistPlayer = {
+    uuid,
+    name: username,
+  };
+
+  whitelist.push(newPlayer);
+  Logger.info(`Added ${username} to whitelist.`);
+  return whitelist;
+}
+
+async function removeFromWhitelist(whitelist: WhitelistPlayer[]): Promise<WhitelistPlayer[]> {
+  if (whitelist.length === 0) {
+    Logger.warn("No players to remove from whitelist.");
+    return whitelist;
+  }
+
+  await listWhitelist(whitelist);
+  const username = await prompt("Enter username to remove: ");
+  if (!username) {
+    Logger.warn("No username provided.");
+    return whitelist;
+  }
+
+  const index = whitelist.findIndex(
+    (p) => p.name.toLowerCase() === username.toLowerCase()
+  );
+
+  if (index === -1) {
+    Logger.error(`${username} is not whitelisted.`);
+    return whitelist;
+  }
+
+  whitelist.splice(index, 1);
+  Logger.info(`Removed ${username} from whitelist.`);
+  return whitelist;
+}
+
+async function manageOps(ops: Op[]): Promise<Op[]> {
   while (true) {
-    const currentMemory = serverConfig.server.memory || "2G";
-    console.log("What would you like to do?");
-    console.log("  1. List ops");
-    console.log("  2. Add op");
-    console.log("  3. Remove op");
-    console.log(`  4. Set memory (current: ${currentMemory})`);
-    console.log("  5. Save and exit");
-    console.log("  6. Exit without saving\n");
+    console.log("\n  Manage Ops:");
+    console.log("    1. List ops");
+    console.log("    2. Add op");
+    console.log("    3. Remove op");
+    console.log("    4. Back\n");
 
-    const choice = await prompt("Select option (1-6): ");
+    const choice = await prompt("  Select option (1-4): ");
 
     switch (choice) {
       case "1":
@@ -214,18 +286,96 @@ export async function config(): Promise<void> {
         ops = await removeOp(ops);
         break;
       case "4":
+        return ops;
+      default:
+        Logger.warn("Invalid option. Please select 1-4.");
+    }
+  }
+}
+
+async function manageWhitelist(whitelist: WhitelistPlayer[]): Promise<WhitelistPlayer[]> {
+  while (true) {
+    console.log("\n  Manage Whitelist:");
+    console.log("    1. List whitelist");
+    console.log("    2. Add to whitelist");
+    console.log("    3. Remove from whitelist");
+    console.log("    4. Back\n");
+
+    const choice = await prompt("  Select option (1-4): ");
+
+    switch (choice) {
+      case "1":
+        await listWhitelist(whitelist);
+        break;
+      case "2":
+        whitelist = await addToWhitelist(whitelist);
+        break;
+      case "3":
+        whitelist = await removeFromWhitelist(whitelist);
+        break;
+      case "4":
+        return whitelist;
+      default:
+        Logger.warn("Invalid option. Please select 1-4.");
+    }
+  }
+}
+
+export async function config(): Promise<void> {
+  // Check if server directory exists
+  try {
+    await Deno.stat(SERVER_DIR);
+  } catch {
+    Logger.error("Server directory not found. Run 'tao setup' first.");
+    Deno.exit(1);
+  }
+
+  let ops = await readOps();
+  let whitelist = await readWhitelist();
+  let serverConfig = await readConfig();
+
+  console.log("\n┌─────────────────────────────────┐");
+  console.log("│     tao - Server Configuration  │");
+  console.log("└─────────────────────────────────┘\n");
+
+  while (true) {
+    const currentMemory = serverConfig.server.memory || "2G";
+    console.log("What would you like to do?");
+    console.log("  1. Manage ops");
+    console.log("       ├─ List ops");
+    console.log("       ├─ Add op");
+    console.log("       └─ Remove op");
+    console.log("  2. Manage whitelist");
+    console.log("       ├─ List whitelist");
+    console.log("       ├─ Add to whitelist");
+    console.log("       └─ Remove from whitelist");
+    console.log(`  3. Set memory (current: ${currentMemory})`);
+    console.log("  4. Save and exit");
+    console.log("  5. Exit without saving\n");
+
+    const choice = await prompt("Select option (1-5): ");
+
+    switch (choice) {
+      case "1":
+        ops = await manageOps(ops);
+        break;
+      case "2":
+        whitelist = await manageWhitelist(whitelist);
+        break;
+      case "3":
         serverConfig = await setMemory(serverConfig);
         break;
-      case "5":
+      case "4":
         await writeOps(ops);
+        await writeWhitelist(whitelist);
         await writeConfig(serverConfig);
         Logger.info("Configuration saved.");
         return;
-      case "6":
+      case "5":
         Logger.info("Exiting without saving.");
         return;
       default:
-        Logger.warn("Invalid option. Please select 1-6.");
+        Logger.warn("Invalid option. Please select 1-5.");
     }
   }
 }
