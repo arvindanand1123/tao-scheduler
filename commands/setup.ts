@@ -72,6 +72,7 @@ spawn-protection=16
 view-distance=10
 simulation-distance=10
 enable-command-block=false
+op-permission-level=4
 pvp=true
 `;
 }
