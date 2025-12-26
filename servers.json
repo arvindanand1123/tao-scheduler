@@ -8,6 +8,6 @@
     "maxPlayers": 20,
     "motd": "A Minecraft Server managed by tao",
     "onlineMode": true,
-    "whitelist": true, 
+    "whitelist": true
   }
 }
