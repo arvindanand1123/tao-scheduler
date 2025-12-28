@@ -49,6 +49,7 @@ Edit `servers.json` to customize your server:
 ### `tao setup`
 
 Creates all necessary artifacts for running the server:
+
 - Downloads the Minecraft server JAR from Mojang
 - Creates `eula.txt` (auto-accepts EULA)
 - Generates `server.properties` from config
@@ -56,11 +57,13 @@ Creates all necessary artifacts for running the server:
 
 ### `tao start`
 
-Starts the Minecraft server in the background with the configured memory allocation. Server state is tracked.
+Starts the Minecraft server in the background with the configured memory
+allocation. Server state is tracked.
 
 ### `tao stop`
 
-Gracefully stops the running server by sending SIGTERM. Waits 30 seconds for graceful shutdown before force-killing.
+Gracefully stops the running server by sending SIGTERM. Waits 30 seconds for
+graceful shutdown before force-killing.
 
 ### `tao tail`
 
@@ -73,6 +76,7 @@ Interactive CLI for server configuration. Run `tao help` for usage details.
 ## Server Files
 
 All server files are stored in the `./server` directory:
+
 - `server-<version>.jar` - Minecraft server JAR
 - `server.properties` - Server configuration
 - `server.log` - Server output log

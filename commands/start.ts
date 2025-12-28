@@ -75,7 +75,10 @@ export async function start(): Promise<void> {
     stderr: "null",
   });
   const pgrepOutput = await pgrepCmd.output();
-  const pid = parseInt(new TextDecoder().decode(pgrepOutput.stdout).trim().split("\n")[0], 10);
+  const pid = parseInt(
+    new TextDecoder().decode(pgrepOutput.stdout).trim().split("\n")[0],
+    10,
+  );
 
   if (isNaN(pid)) {
     Logger.error("Failed to start server - could not find Java process");

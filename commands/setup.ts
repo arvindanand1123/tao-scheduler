@@ -19,7 +19,7 @@ async function getServerJarUrl(version: string): Promise<string> {
   Logger.info(`Fetching Minecraft version manifest...`);
 
   const manifestResponse = await fetch(
-    "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+    "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
   );
   const manifest: VersionManifest = await manifestResponse.json();
 

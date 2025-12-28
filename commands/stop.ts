@@ -38,7 +38,10 @@ function isProcessRunning(pid: number): boolean {
   }
 }
 
-async function waitForProcess(pid: number, timeoutMs: number): Promise<boolean> {
+async function waitForProcess(
+  pid: number,
+  timeoutMs: number,
+): Promise<boolean> {
   const startTime = Date.now();
   while (Date.now() - startTime < timeoutMs) {
     if (!isProcessRunning(pid)) {

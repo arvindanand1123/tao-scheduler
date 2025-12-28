@@ -41,7 +41,7 @@ interface DbRow {
 export function getServerState(): ServerState {
   const db = getDb();
   const row = db.prepare(
-    "SELECT pid, status, started_at, version FROM server_state WHERE id = 1"
+    "SELECT pid, status, started_at, version FROM server_state WHERE id = 1",
   ).get() as DbRow | undefined;
 
   if (!row) {
@@ -59,14 +59,14 @@ export function getServerState(): ServerState {
 export function setServerRunning(pid: number, version: string): void {
   const db = getDb();
   db.prepare(
-    "UPDATE server_state SET pid = ?, status = 'running', started_at = ?, version = ? WHERE id = 1"
+    "UPDATE server_state SET pid = ?, status = 'running', started_at = ?, version = ? WHERE id = 1",
   ).run(pid, new Date().toISOString(), version);
 }
 
 export function setServerStopped(): void {
   const db = getDb();
   db.prepare(
-    "UPDATE server_state SET pid = NULL, status = 'stopped', started_at = NULL WHERE id = 1"
+    "UPDATE server_state SET pid = NULL, status = 'stopped', started_at = NULL WHERE id = 1",
   ).run();
 }
 

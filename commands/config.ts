@@ -106,7 +106,10 @@ async function readBannedPlayers(): Promise<BannedPlayer[]> {
 }
 
 async function writeBannedPlayers(banned: BannedPlayer[]): Promise<void> {
-  await Deno.writeTextFile(BANNED_PLAYERS_FILE, JSON.stringify(banned, null, 2));
+  await Deno.writeTextFile(
+    BANNED_PLAYERS_FILE,
+    JSON.stringify(banned, null, 2),
+  );
 }
 
 async function readUserCache(): Promise<UserCachePlayer[]> {
@@ -118,14 +121,13 @@ async function readUserCache(): Promise<UserCachePlayer[]> {
   }
 }
 
-
 async function warnIfWhitelistDisabled(): Promise<boolean> {
   let enabled: boolean;
   try {
     const content = await Deno.readTextFile(SERVER_PROPERTIES_FILE);
-    enabled =  content.includes("white-list=true");
+    enabled = content.includes("white-list=true");
   } catch {
-    enabled = false
+    enabled = false;
   }
   if (!enabled) {
     Logger.warn("Whitelist is currently DISABLED in server.properties.");
@@ -135,14 +137,17 @@ async function warnIfWhitelistDisabled(): Promise<boolean> {
   return true;
 }
 
-async function parsePlayerIPsFromLogs(): Promise<Map<string, { ip: string; lastSeen: string }>> {
+async function parsePlayerIPsFromLogs(): Promise<
+  Map<string, { ip: string; lastSeen: string }>
+> {
   const playerIPs = new Map<string, { ip: string; lastSeen: string }>();
   try {
     const content = await Deno.readTextFile(SERVER_LOG_FILE);
     const lines = content.split("\n");
 
     // Match patterns like: [16:45:23] [Server thread/INFO]: PlayerName[/192.168.1.100:54321] logged in
-    const loginPattern = /\[(\d{2}:\d{2}:\d{2})\].*?:\s+(\w+)\[\/([0-9.]+):\d+\]\s+logged in/;
+    const loginPattern =
+      /\[(\d{2}:\d{2}:\d{2})\].*?:\s+(\w+)\[\/([0-9.]+):\d+\]\s+logged in/;
 
     for (const line of lines) {
       const match = line.match(loginPattern);
@@ -196,13 +201,15 @@ async function prompt(message: string): Promise<string> {
 async function fetchUUID(username: string): Promise<string | null> {
   try {
     const response = await fetch(
-      `https://api.mojang.com/users/profiles/minecraft/${username}`
+      `https://api.mojang.com/users/profiles/minecraft/${username}`,
     );
     if (!response.ok) return null;
     const data = await response.json();
     // Format UUID with dashes
     const uuid = data.id;
-    return `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${uuid.slice(16, 20)}-${uuid.slice(20)}`;
+    return `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${
+      uuid.slice(16, 20)
+    }-${uuid.slice(20)}`;
   } catch {
     return null;
   }
@@ -276,7 +283,7 @@ async function removeOp(ops: Op[]): Promise<Op[]> {
   }
 
   const index = ops.findIndex(
-    (op) => op.name.toLowerCase() === username.toLowerCase()
+    (op) => op.name.toLowerCase() === username.toLowerCase(),
   );
 
   if (index === -1) {
@@ -291,7 +298,9 @@ async function removeOp(ops: Op[]): Promise<Op[]> {
 
 async function setMemory(config: ServerConfig): Promise<ServerConfig> {
   const currentMemory = config.server.memory || "2G";
-  const newMemory = await prompt(`Memory allocation (current: ${currentMemory}): `);
+  const newMemory = await prompt(
+    `Memory allocation (current: ${currentMemory}): `,
+  );
 
   if (!newMemory) {
     Logger.info("Keeping current memory setting.");
@@ -406,7 +415,7 @@ async function unbanPlayer(banned: BannedPlayer[]): Promise<BannedPlayer[]> {
   }
 
   const index = banned.findIndex(
-    (p) => p.name.toLowerCase() === username.toLowerCase()
+    (p) => p.name.toLowerCase() === username.toLowerCase(),
   );
 
   if (index === -1) {
@@ -419,7 +428,9 @@ async function unbanPlayer(banned: BannedPlayer[]): Promise<BannedPlayer[]> {
   return banned;
 }
 
-async function addToWhitelist(whitelist: WhitelistPlayer[]): Promise<WhitelistPlayer[]> {
+async function addToWhitelist(
+  whitelist: WhitelistPlayer[],
+): Promise<WhitelistPlayer[]> {
   const shouldProceed = await warnIfWhitelistDisabled();
   if (!shouldProceed) {
     return whitelist;
@@ -455,7 +466,9 @@ async function addToWhitelist(whitelist: WhitelistPlayer[]): Promise<WhitelistPl
   return whitelist;
 }
 
-async function removeFromWhitelist(whitelist: WhitelistPlayer[]): Promise<WhitelistPlayer[]> {
+async function removeFromWhitelist(
+  whitelist: WhitelistPlayer[],
+): Promise<WhitelistPlayer[]> {
   if (whitelist.length === 0) {
     Logger.warn("No players to remove from whitelist.");
     return whitelist;
@@ -474,7 +487,7 @@ async function removeFromWhitelist(whitelist: WhitelistPlayer[]): Promise<Whitel
   }
 
   const index = whitelist.findIndex(
-    (p) => p.name.toLowerCase() === username.toLowerCase()
+    (p) => p.name.toLowerCase() === username.toLowerCase(),
   );
 
   if (index === -1) {
@@ -515,7 +528,9 @@ async function manageOps(ops: Op[]): Promise<Op[]> {
   }
 }
 
-async function manageWhitelist(whitelist: WhitelistPlayer[]): Promise<WhitelistPlayer[]> {
+async function manageWhitelist(
+  whitelist: WhitelistPlayer[],
+): Promise<WhitelistPlayer[]> {
   while (true) {
     console.log("\n    Manage Whitelist:");
     console.log("      1. List whitelist");
@@ -577,7 +592,9 @@ interface PlayerManagementState {
   banned: BannedPlayer[];
 }
 
-async function managePlayers(state: PlayerManagementState): Promise<PlayerManagementState> {
+async function managePlayers(
+  state: PlayerManagementState,
+): Promise<PlayerManagementState> {
   while (true) {
     console.log("\n  Manage Players:");
     console.log("    1. List all players (who have logged in)");
